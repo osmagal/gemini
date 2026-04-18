@@ -286,7 +286,7 @@ python3 main.py pdf \
 No arquivo `prompt.txt`:
 
 ```
-Compare a data de distribuição com {data_atual} e informe se o processo
+Compare a data de vencimento com {data_atual} e informe se o boleto
 tem menos de 30 dias. Analista responsável: {analista}.
 ```
 
