@@ -27,6 +27,13 @@ import json
 import sys
 from pathlib import Path
 
+MIN_PYTHON = (3, 10)
+if sys.version_info < MIN_PYTHON:
+    raise RuntimeError(
+        f"Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+ é necessário. "
+        f"Versão atual: {sys.version_info.major}.{sys.version_info.minor}."
+    )
+
 import gemini
 import gemini_chat
 import gemini_code_python

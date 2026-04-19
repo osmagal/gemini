@@ -1,0 +1,31 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Análise de PDFs</h2>
+    <p>Faça upload de um arquivo PDF e receba JSON estruturado com a análise.</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="panel">
+  <label for="prompt">Instruções de análise</label>
+  <textarea id="prompt" name="prompt" rows="4" placeholder="Explique o que você quer extrair ou analisar...">{{ prompt or '' }}</textarea>
+
+  <label for="pdf_file">Arquivo PDF</label>
+  <input id="pdf_file" name="pdf_file" type="file" accept="application/pdf" />
+
+  <button class="button button-primary" type="submit">Analisar documento</button>
+</form>
+
+{% if error %}
+<div class="panel panel-error">{{ error }}</div>
+{% endif %}
+
+{% if result %}
+<div class="panel panel-result">
+  <h3>Resultado da análise</h3>
+  <pre>{{ result | tojson(indent=2, ensure_ascii=False) }}</pre>
+</div>
+{% endif %}
+{% endblock %}

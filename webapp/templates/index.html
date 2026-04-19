@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="hero-card">
+  <h2>Aplicação local com Gemini</h2>
+  <p>Use o backend existente para enviar mensagens ao Gemini ou analisar documentos PDF com IA.</p>
+  <div class="hero-actions">
+    <a class="button button-primary" href="{{ url_for('chat.index') }}">Abrir Chat</a>
+    <a class="button button-secondary" href="{{ url_for('pdf.index') }}">Analisar PDF</a>
+  </div>
+</div>
+
+<section class="grid-two">
+  <article class="card">
+    <h3>Chat inteligente</h3>
+    <p>Envie perguntas ou solicitações e receba respostas geradas pelo Gemini.</p>
+  </article>
+  <article class="card">
+    <h3>Análise de documentos</h3>
+    <p>Faça upload de PDFs e obtenha retornos estruturados sobre o conteúdo.</p>
+  </article>
+</section>
+{% endblock %}

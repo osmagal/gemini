@@ -8,6 +8,7 @@ Automação de interação com o [Gemini](https://gemini.google.com) via Playwri
 
 - [Requisitos](#requisitos)
 - [Instalação](#instalação)
+- [Frontend local](#frontend-local)
 - [Primeiro uso — Login](#primeiro-uso--login)
 - [Arquitetura](#arquitetura)
 - [Módulos](#módulos)
@@ -22,17 +23,36 @@ Automação de interação com o [Gemini](https://gemini.google.com) via Playwri
 
 ## Requisitos
 
-- Python 3.12+
+- Python 3.10+
 - Conta Google com acesso ao Gemini
+
+Se o seu sistema ainda usa uma versão mais antiga (por exemplo, Python 3.6), instale uma versão moderna ou use `python3.12`/`python3.11` para executar o projeto.
 
 ## Instalação
 
 ```bash
-pip install playwright pdfplumber
+pip install -r requirements.txt
 
 # Instala o navegador Chromium usado pelo Playwright
 python3 -m playwright install chromium
 ```
+
+---
+
+## Frontend local
+
+O projeto agora inclui um frontend local em Flask com dois módulos independentes:
+
+- `webapp/chat_module.py` → chat Gemini via texto.
+- `webapp/pdf_module.py` → análise de PDFs e retorno em JSON.
+
+Para executar a interface local (use `python3` se `python` ainda aponta para Python 2):
+
+```bash
+python3 run_webapp.py
+```
+
+Abra `http://127.0.0.1:5000` no navegador.
 
 ---
 
@@ -54,9 +74,16 @@ O navegador abrirá visível. Faça login no Google normalmente. Nas execuções
 gemini_shared.py          ← primitivas Playwright compartilhadas
     ├── gemini_chat.py    ← módulo: chat simples (texto → texto)
     ├── gemini.py         ← módulo: extração de PDF (PDF + prompt → JSON)
-    └── gemini_code_python.py  ← módulo: gerador de código (HTML + JSON + prompt → Python)
+    ├── gemini_code_python.py  ← módulo: gerador de código (HTML + JSON + prompt → Python)
+webapp/                   ← frontend Flask local
+    ├── app.py            ← inicializa o app Flask e registra módulos
+    ├── chat_module.py    ← rota de chat do Gemini
+    ├── pdf_module.py     ← rota de análise de PDF
+    ├── templates/        ← páginas e layout do frontend
+    └── static/           ← CSS do frontend moderno
 
 main.py                   ← CLI unificada com subcomandos: chat | pdf | code
+run_webapp.py             ← executa a interface web local
 ```
 
 **`gemini_shared.py`** contém todas as primitivas reutilizadas: abertura do browser, injeção de texto via clipboard, polling de resposta, envio multi-turno para documentos grandes, chunking de texto e substituição de variáveis.

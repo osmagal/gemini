@@ -1,0 +1,27 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Chat Gemini</h2>
+    <p>Envie uma mensagem e receba a resposta diretamente do backend Gemini.</p>
+  </div>
+</div>
+
+<form method="post" class="panel">
+  <label for="message">Mensagem</label>
+  <textarea id="message" name="message" rows="6" placeholder="Escreva sua pergunta aqui...">{{ message or '' }}</textarea>
+  <button class="button button-primary" type="submit">Enviar</button>
+</form>
+
+{% if error %}
+<div class="panel panel-error">{{ error }}</div>
+{% endif %}
+
+{% if response %}
+<div class="panel panel-result">
+  <h3>Resposta</h3>
+  <pre>{{ response }}</pre>
+</div>
+{% endif %}
+{% endblock %}
