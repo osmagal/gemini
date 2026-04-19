@@ -8,24 +8,133 @@
   </div>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="panel">
+<form id="pdf-form" class="panel" data-no-overlay>
   <label for="prompt">Instruções de análise</label>
-  <textarea id="prompt" name="prompt" rows="4" placeholder="Explique o que você quer extrair ou analisar...">{{ prompt or '' }}</textarea>
+  <textarea id="prompt" name="prompt" rows="4"
+    placeholder="Explique o que você quer extrair ou analisar...">Extraia os dados principais do documento em formato JSON.</textarea>
 
   <label for="pdf_file">Arquivo PDF</label>
-  <input id="pdf_file" name="pdf_file" type="file" accept="application/pdf" />
+  <input id="pdf_file" name="pdf_file" type="file" accept="application/pdf" required />
 
-  <button class="button button-primary" type="submit">Analisar documento</button>
+  <button class="button button-primary" type="submit" id="submit-btn">Analisar documento</button>
 </form>
 
-{% if error %}
-<div class="panel panel-error">{{ error }}</div>
-{% endif %}
-
-{% if result %}
-<div class="panel panel-result">
-  <h3>Resultado da análise</h3>
-  <pre>{{ result | tojson(indent=2, ensure_ascii=False) }}</pre>
+<div id="progress-container" class="panel" style="display: none;">
+  <h3 id="status-text">Processando...</h3>
+  <div class="progress-bar-bg"
+    style="background: #e0e0e0; border-radius: 8px; height: 12px; margin: 10px 0; overflow: hidden;">
+    <div id="progress-bar"
+      style="background: var(--primary-color, #3b82f6); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+  </div>
+  <p id="percent-text">0%</p>
 </div>
-{% endif %}
+
+<div id="error-container" class="panel panel-error" style="display: none;"></div>
+
+<div id="result-container" class="panel panel-result" style="display: none;">
+  <h3>Resultado da análise</h3>
+  <pre id="result-json"></pre>
+</div>
+
+<script>
+  document.getElementById('pdf-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submit-btn');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const statusText = document.getElementById('status-text');
+    const percentText = document.getElementById('percent-text');
+    const errorContainer = document.getElementById('error-container');
+    const resultContainer = document.getElementById('result-container');
+    const resultJson = document.getElementById('result-json');
+
+    // Reset UI
+    errorContainer.style.display = 'none';
+    resultContainer.style.display = 'none';
+    progressContainer.style.display = 'block';
+    progressContainer.querySelector('.progress-bar-bg').style.display = 'block';
+    percentText.style.display = 'block';
+    submitBtn.disabled = true;
+    progressBar.style.width = '0%';
+    percentText.innerText = '0%';
+    statusText.innerText = 'Iniciando...';
+
+    try {
+      // 1. Start analysis
+      const response = await fetch('/pdf/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erro ao iniciar análise');
+      }
+
+      const { task_id } = await response.json();
+
+      // 2. Poll for progress
+      const poll = async () => {
+        const res = await fetch(`/pdf/status/${task_id}`);
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        progressBar.style.width = `${data.percent}%`;
+        percentText.innerText = `${data.percent}%`;
+        statusText.innerText = data.status;
+
+        if (data.completed) {
+          if (data.error) {
+            showError(data.error);
+          } else {
+            fetchResult(task_id);
+          }
+          return;
+        }
+
+        setTimeout(poll, 1000);
+      };
+
+      poll();
+
+    } catch (err) {
+      showError(err.message);
+    }
+
+    async function fetchResult(taskId) {
+      statusText.innerText = 'Finalizando...';
+      try {
+        const res = await fetch(`/pdf/result/${taskId}`);
+        const data = await res.json();
+
+        if (data.error) {
+          showError(data.error);
+        } else {
+          resultJson.innerText = JSON.stringify(data.result, null, 2);
+          resultContainer.style.display = 'block';
+          statusText.innerHTML = '<span style="color: #059669;">✓ Análise completa!</span>';
+          progressContainer.querySelector('.progress-bar-bg').style.display = 'none';
+          percentText.style.display = 'none';
+          // Limpar o input de arquivo para permitir novo upload
+          document.getElementById('pdf_file').value = '';
+        }
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      errorContainer.innerText = msg;
+      errorContainer.style.display = 'block';
+      progressContainer.style.display = 'none';
+      submitBtn.disabled = false;
+    }
+  });
+</script>
 {% endblock %}

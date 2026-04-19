@@ -7,6 +7,7 @@ from .pdf_module import pdf_bp
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.config["SECRET_KEY"] = "change-me-for-production"
+    app.json.ensure_ascii = False
 
     app.register_blueprint(chat_bp, url_prefix="/chat")
     app.register_blueprint(pdf_bp, url_prefix="/pdf")

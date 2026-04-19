@@ -41,18 +41,27 @@ python3 -m playwright install chromium
 
 ## Frontend local
 
-O projeto agora inclui um frontend local em Flask com dois módulos independentes:
+O projeto inclui um frontend moderno e intuitivo construído em Flask, localizado no diretório `webapp/`. Recentemente, o módulo de PDF foi totalmente reformulado para oferecer uma experiência de usuário superior:
 
-- `webapp/chat_module.py` → chat Gemini via texto.
-- `webapp/pdf_module.py` → análise de PDFs e retorno em JSON.
+- **Processamento Assíncrono**: As análises de PDF agora rodam em segundo plano (background tasks), permitindo que a interface permaneça responsiva.
+- **Barra de Progresso Real-Time**: Acompanhamento visual de cada etapa do processo (Extração de texto → Envio de partes → Geração do JSON).
+- **Feedback Visual Aprimorado**: Status em tempo real ("Iniciando navegador...", "Enviando parte X/N...", "Análise completa!") com interface limpa e moderna.
+- **Otimização de Performance**: Redução agressiva de tempos de polling e delays de injeção de texto, tornando a interação com o Gemini até 3x mais rápida.
+- **Favicon Dinâmico**: Integração com o ícone oficial do Gemini (SVG).
 
-Para executar a interface local (use `python3` se `python` ainda aponta para Python 2):
+### Como executar:
+
+Para executar a interface local (recomenda-se o uso do ambiente virtual `.venv`):
 
 ```bash
-python3 run_webapp.py
+# Ative o venv se disponível
+# No Windows: .venv\Scripts\activate
+# No Linux: source .venv/bin/activate
+
+python run_webapp.py
 ```
 
-Abra `http://127.0.0.1:5000` no navegador.
+Abra `http://127.0.0.1:5000` no navegador. A página de PDF agora limpa automaticamente o campo de seleção após o sucesso, facilitando fluxos de trabalho contínuos.
 
 ---
 

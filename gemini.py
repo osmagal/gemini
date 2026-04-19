@@ -133,7 +133,7 @@ def _try_upload_strategy(page, pdf_path: str, user_prompt: str) -> str | None:
         file_input.wait_for(state="attached", timeout=3_000)
         file_input.set_input_files(abs_path)
         print("[RPA] Arquivo enviado via input[type=file].", file=sys.stderr)
-        time.sleep(2)
+        time.sleep(0.5)
         return _prompt_after_upload(page, user_prompt)
     except Exception:
         pass
@@ -148,7 +148,7 @@ def _try_upload_strategy(page, pdf_path: str, user_prompt: str) -> str | None:
                 btn.click()
             fc_info.value.set_files(abs_path)
             print(f"[RPA] Arquivo enviado via '{sel}'.", file=sys.stderr)
-            time.sleep(2)
+            time.sleep(0.5)
             return _prompt_after_upload(page, user_prompt)
         except Exception:
             continue
@@ -159,18 +159,18 @@ def _try_upload_strategy(page, pdf_path: str, user_prompt: str) -> str | None:
 
 def _prompt_after_upload(page, user_prompt: str) -> str:
     """Aguarda o Gemini processar o arquivo e envia o prompt de análise."""
-    for _ in range(20):
-        time.sleep(1)
+    for _ in range(50):
+        time.sleep(0.4)
         uploading = page.evaluate("""() => {
             const el = document.querySelector(
-                '.upload-progress, .file-uploading, [aria-label*="uploading"]'
+                '.upload-progress, .file-uploading, [aria-label*="uploading"], [role="progressbar"]'
             );
             return !!el;
         }""")
         if not uploading:
             break
 
-    time.sleep(1)
+    time.sleep(0.5)
     final_prompt = f"{JSON_INSTRUCTION}\n\n{user_prompt}"
     focus_input(page)
     inject_text(page, final_prompt)
@@ -236,23 +236,72 @@ def run(
     pdf_path: str,
     user_prompt: str,
     show_browser: bool = False,
+    progress_callback=None,
 ) -> str:
     """
     Abre o Gemini, envia o PDF e o prompt, retorna a resposta bruta do modelo.
     Tenta upload nativo primeiro; usa multi-turno como fallback.
     """
+    def update(msg, percent):
+        if progress_callback:
+            progress_callback(msg, percent)
+
     with sync_playwright() as p:
-        ctx = create_browser_context(p, headless=not show_browser)
+        update("Iniciando navegador...", 5)
+        ctx = create_browser_context(p, headless=False)
         page = ctx.new_page()
         try:
-            print("[RPA] Abrindo Gemini...", file=sys.stderr)
+            update("Abrindo Gemini...", 10)
             page.goto(GEMINI_URL, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
             wait_for_input(page)
+            
+            update("Extraindo texto do PDF...", 20)
+            pdf_text = extract_pdf_text(pdf_path)
+            
+            # Estratégia multi-turno com progresso detalhado
+            chunks = chunk_text(pdf_text, CHUNK_SIZE)
+            n = len(chunks)
+            update(f"Preparando {n} partes para envio...", 30)
+            
+            # Turno 0: instrução
+            intro = (
+                f"Vou te enviar um documento dividido em {n} parte(s). "
+                "Leia cada parte sem responder. "
+                "Só responda quando eu enviar 'ANALISAR'. "
+                "Confirme com apenas 'OK'."
+            )
+            update("Enviando instruções iniciais...", 35)
+            focus_input(page)
+            inject_text(page, intro)
+            send_message(page)
+            from gemini_shared import wait_for_ack
+            wait_for_ack(page, timeout=30)
 
-            response = _try_upload_strategy(page, pdf_path, user_prompt)
-            if not response:
-                pdf_text = extract_pdf_text(pdf_path)
-                response = _multiturn_strategy(page, pdf_text, user_prompt)
+            # Turnos 1..N: partes do documento
+            for i, chunk in enumerate(chunks, 1):
+                msg = f"PARTE {i}/{n}:\n\n{chunk}"
+                if i == n:
+                    msg += "\n\n[FIM DO DOCUMENTO]"
+                msg += "\n\nConfirme com 'OK'."
+                
+                percent = 35 + int((i / n) * 45) # 35% a 80%
+                update(f"Enviando parte {i}/{n}...", percent)
+                
+                focus_input(page)
+                inject_text(page, msg)
+                send_message(page)
+                wait_for_ack(page, timeout=45)
+
+            # Turno final: dispara análise com o prompt completo
+            update("Solicitando análise final...", 85)
+            trigger = f"ANALISAR\n\n{JSON_INSTRUCTION}\n\n{user_prompt}"
+            focus_input(page)
+            inject_text(page, trigger)
+            send_message(page)
+            
+            update("Aguardando resposta do Gemini...", 90)
+            response = wait_for_response(page)
+            update("Concluído!", 100)
 
             return response
         except PlaywrightTimeout as e:
@@ -268,6 +317,7 @@ def extract_from_pdf(
     user_prompt: str,
     vars_list: list[str] | None = None,
     show_browser: bool = False,
+    progress_callback=None,
 ) -> dict | list:
     """
     Extrai dados estruturados de um PDF via Gemini e retorna como dict/list.
@@ -297,5 +347,7 @@ def extract_from_pdf(
         file=sys.stderr,
     )
 
-    raw_response = run(str(pdf), prompt, show_browser=show_browser)
+    raw_response = run(
+        str(pdf), prompt, show_browser=show_browser, progress_callback=progress_callback
+    )
     return extract_json_from_text(raw_response)

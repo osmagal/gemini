@@ -4,12 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title or 'Gemini RPA Web' }}</title>
+    <link rel="icon" type="image/svg+xml" href="https://www.gstatic.com/lamda/images/gemini_sparkle_aurora_33f86dc0c0257da337c63.svg" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <span class="brand-logo">G</span>
+        <div class="brand-logo">
+          <img src="https://www.gstatic.com/lamda/images/gemini_sparkle_aurora_33f86dc0c0257da337c63.svg" alt="Gemini Logo">
+        </div>
         <div>
           <h1>Gemini RPA Web</h1>
           <p>Chat e análise de documentos local</p>
@@ -39,5 +42,60 @@
     <footer class="footer">
       <p>Executa Gemini via backend Playwright local.</p>
     </footer>
+
+    <div id="loading-overlay">
+      <div class="loader-container">
+        <div class="loader-spinner">
+          <img src="https://www.gstatic.com/lamda/images/gemini_sparkle_aurora_33f86dc0c0257da337c63.svg" alt="Gemini">
+        </div>
+        <h3 id="loader-message">Processando...</h3>
+        <p>Aguarde enquanto o Gemini processa sua solicitação.</p>
+        <div class="loader-bar">
+          <div class="loader-progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('submit', function(e) {
+        if (e.defaultPrevented || e.target.closest('[data-no-overlay]')) return;
+        
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+          
+          const messageEl = document.getElementById('loader-message');
+          const isPdf = !!e.target.querySelector('input[type="file"]');
+          
+          const steps = isPdf ? [
+            "Iniciando automação Playwright...",
+            "Acessando ambiente Gemini...",
+            "Enviando PDF para análise...",
+            "Aguardando processamento da IA...",
+            "Extraindo dados estruturados...",
+            "Quase pronto..."
+          ] : [
+            "Iniciando automação Playwright...",
+            "Acessando ambiente Gemini...",
+            "Enviando sua mensagem...",
+            "Aguardando resposta da IA...",
+            "Finalizando processamento...",
+            "Quase pronto..."
+          ];
+
+          let currentStep = 0;
+          messageEl.innerText = steps[0];
+
+          const interval = setInterval(() => {
+            currentStep++;
+            if (currentStep < steps.length) {
+              messageEl.innerText = steps[currentStep];
+            } else {
+              clearInterval(interval);
+            }
+          }, 3500); // Muda o texto a cada 3.5 segundos
+        }
+      });
+    </script>
   </body>
 </html>

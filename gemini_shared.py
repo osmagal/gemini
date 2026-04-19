@@ -16,8 +16,8 @@ GEMINI_URL = "https://gemini.google.com/app"
 DEFAULT_TIMEOUT   = 60_000   # ms – timeout geral para elementos
 SEND_TIMEOUT      = 10_000   # ms – timeout para botão de envio
 RESPONSE_MAX_WAIT = 300      # s  – máximo aguardando resposta
-RESPONSE_POLL     = 2        # s  – intervalo de polling
-STABLE_CYCLES     = 3        # ciclos estáveis = resposta completa
+RESPONSE_POLL     = 0.8      # s  – intervalo de polling
+STABLE_CYCLES     = 2        # ciclos estáveis = resposta completa
 CHUNK_SIZE        = 28_000   # chars por turno no multi-turno
 
 INPUT_SELECTORS = [
@@ -100,14 +100,14 @@ def inject_text(page, text: str) -> None:
     Funciona para textos de qualquer tamanho.
     """
     page.evaluate("async (t) => { await navigator.clipboard.writeText(t); }", text)
-    time.sleep(0.3)
+    time.sleep(0.15)
     page.keyboard.press("Control+a")
-    time.sleep(0.2)
+    time.sleep(0.1)
     page.keyboard.press("Delete")
-    time.sleep(0.2)
+    time.sleep(0.1)
     page.keyboard.press("Control+v")
-    # Espera proporcional ao tamanho do texto
-    time.sleep(max(1.5, min(6, len(text) / 15_000)))
+    # Espera proporcional ao tamanho do texto (mais agressiva)
+    time.sleep(max(0.7, min(4, len(text) / 25_000)))
 
 
 def send_message(page) -> None:
@@ -232,18 +232,24 @@ def wait_for_response(
 
     while time.time() - start < max_wait:
         time.sleep(RESPONSE_POLL)
+        
+        # Se detectarmos que PAROU de gerar (botão de stop sumiu), podemos ser mais agressivos
+        generating = is_generating(page)
         current = get_response_text(page, prefer_code_blocks=prefer_code_blocks)
 
         if current and current == last:
             stable += 1
-            if stable >= stable_cycles and not is_generating(page):
+            # Se não está mais gerando e o texto está estável, retorna imediatamente
+            if not generating and stable >= stable_cycles:
                 return current
+            # Se ainda está gerando mas está estável por muito tempo (raro), continua
         else:
             stable = 0
             last = current
 
-        if is_generating(page):
-            stable = 0
+        # Se mudou o texto mas parou de gerar, a resposta pode estar pronta
+        if not generating and current and last:
+             stable += 1 
 
     return last or ""
 
