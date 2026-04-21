@@ -2,6 +2,10 @@
 
 Automação de interação com o [Gemini](https://gemini.google.com) via Playwright. O projeto expõe três módulos independentes — chat, extração de PDF e geração de código — todos acessíveis por uma CLI unificada ou importáveis como biblioteca Python.
 
+<a href="https://www.youtube.com/watch?v=LTdxUz6qEog" target="_blank">
+  <img src="https://img.youtube.com/vi/LTdxUz6qEog/maxresdefault.jpg" alt="Assista ao vídeo de demonstração" style="max-width: 100%;">
+</a>
+
 ---
 
 ## Sumário
